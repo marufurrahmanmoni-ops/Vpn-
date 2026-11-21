@@ -27,6 +27,15 @@ object ProfileFactory {
 
         p.mName = "${Countries.flag(server.countryCode)} ${server.countryName} · ${server.hostName}"
 
+        // Server identity: the server certificate must carry the expected name and be issued for a
+        // TLS server (stops anyone with some other certificate from the same CA impersonating it).
+        server.pinnedCertName?.let { name ->
+            p.mCheckRemoteCN = true
+            p.mRemoteCN = name
+            p.mX509AuthType = VpnProfile.X509_VERIFY_TLSREMOTE_RDN
+            p.mExpectTLSCert = true
+        }
+
         // VPN Gate / SoftEther servers do not negotiate data ciphers (no NCP) and use AES-128-CBC.
         // OpenVPN 2.6 only accepts a legacy server cipher if it is listed in --data-ciphers, so
         // append it (same rule ics-openvpn applies when upgrading old profiles) and set it as fallback.

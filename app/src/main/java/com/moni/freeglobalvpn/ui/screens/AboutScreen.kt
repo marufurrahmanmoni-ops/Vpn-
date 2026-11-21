@@ -107,7 +107,8 @@ fun PrivacyScreen(vm: MainViewModel, onBack: () -> Unit) {
             }
             SectionTitle("Third-party services the app contacts")
             AppCard {
-                Bullet("www.vpngate.net – to download the public server list.")
+                Bullet("raw.githubusercontent.com / cdn.jsdelivr.net – to download the list of tested-good servers from this app's GitHub repository.")
+                Bullet("www.vpngate.net – live server list, only if the tested list is unavailable.")
                 Bullet("ipwho.is / api.ipify.org – to show your public IP (proves the IP changed). They see that request.")
                 Bullet("speed.cloudflare.com – only when you tap “Run” speed test.")
                 Bullet("1.1.1.1 / 8.8.8.8 port 443 – a TCP handshake to measure tunnel latency (no data sent).")

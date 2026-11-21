@@ -1,0 +1,55 @@
+# OPTIONAL – not active. Copy to .github/workflows/ to refresh the in-app list automatically every 4 h.
+# Tests every free VPN server with a real OpenVPN tunnel and publishes ONLY the good ones
+# to the `servers` branch (servers/verified.json), which the app downloads.
+name: Update verified servers
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 */4 * * *"   # every 4 hours
+permissions:
+  contents: write
+concurrency:
+  group: update-servers
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenVPN
+        run: sudo apt-get update -q && sudo apt-get install -y -q openvpn curl dnsutils
+      - name: Get candidate pools
+        run: |
+          git clone --depth 1 -q https://github.com/GeorgeXie2333/vpngate-list-mirror.git /tmp/pool || echo "mirror unavailable – using live API only"
+          curl -fsSL -o /tmp/previous.json "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/servers/verified.json" || echo '{}' > /tmp/previous.json
+      - name: Real tunnel test of every server
+        run: |
+          sudo python3 tools/vpn-server-test/test_servers.py --pool /tmp/pool --previous /tmp/previous.json \
+            --community servers/community.json --parallel 32 --publish out
+          sudo chown -R "$USER" out
+      - name: Job summary
+        if: always()
+        run: cat out/results.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Publish to the servers branch
+        env:
+          SIGNING_KEY: ${{ secrets.VERIFIED_LIST_SIGNING_KEY }}
+        run: |
+          python3 -c "import json,sys; d=json.load(open('out/verified.json')); sys.exit(0 if d['servers'] else 1)" || { echo "No good servers – keeping the previous list"; exit 0; }
+          cd out
+          if [ -n "$SIGNING_KEY" ]; then
+            printf '%s\n' "$SIGNING_KEY" > /tmp/k.pem
+            openssl dgst -sha256 -sign /tmp/k.pem verified.json | base64 -w0 > verified.json.sig
+            rm -f /tmp/k.pem
+          fi
+          git init -q -b servers
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add verified.json results.md $( [ -f verified.json.sig ] && echo verified.json.sig )
+          git commit -q -m "Verified servers $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" servers
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-test-results
+          path: out/results.json

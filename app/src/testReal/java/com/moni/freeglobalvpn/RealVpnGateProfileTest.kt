@@ -41,6 +41,7 @@ class RealVpnGateProfileTest {
             assertTrue("${s.id} must allow server cipher", cfg.contains("data-ciphers AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-128-CBC"))
             assertTrue(s.id, cfg.contains("data-ciphers-fallback AES-128-CBC"))
             assertTrue("DNS forced", cfg.contains("dhcp-option DNS 1.1.1.1") || p.mOverrideDNS)
+            assertTrue("server cert name pinned", cfg.contains("verify-x509-name opengw.net name") && cfg.contains("remote-cert-tls server"))
             assertFalse("no scripts", cfg.lineSequence().any { it.trim().startsWith("up ") || it.startsWith("script-security 2") })
             assertTrue("bypass list carried", "com.bKash.customerapp" in p.mAllowedAppsVpn && p.mAllowedAppsVpnAreDisallowed)
         }

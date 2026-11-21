@@ -1,6 +1,8 @@
 package com.moni.freeglobalvpn.data
 
 import com.moni.freeglobalvpn.data.provider.ServerProvider
+import com.moni.freeglobalvpn.data.provider.VerifiedListProvider
+import com.moni.freeglobalvpn.data.provider.VpnGateParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +38,10 @@ class ServerRepository(
         val error: String? = null,
         /** providerId -> error for partial failures */
         val providerErrors: Map<String, String> = emptyMap(),
+        /** When the verified-good list was produced (0 = not using it). */
+        val verifiedAt: Long = 0,
+        /** True when the verified list was unavailable and the raw live list is shown instead. */
+        val unverifiedFallback: Boolean = false,
     )
 
     private val _state = MutableStateFlow(State())
@@ -52,7 +58,8 @@ class ServerRepository(
         scope.launch(Dispatchers.IO) {
             val snap = cache.loadSnapshot()
             _state.update {
-                if (snap != null) it.copy(servers = snap.servers, health = snap.health, fetchedAt = snap.fetchedAt, loadingFromCache = false)
+                if (snap != null) it.copy(servers = snap.servers, health = snap.health, fetchedAt = snap.fetchedAt, loadingFromCache = false,
+                    verifiedAt = snap.verifiedAt, unverifiedFallback = snap.verifiedAt == 0L && snap.servers.any { s -> s.providerId == VpnGateParser.PROVIDER_ID })
                 else it.copy(loadingFromCache = false)
             }
             if (snap == null || System.currentTimeMillis() - snap.fetchedAt > STALE_MS) refresh()
@@ -67,18 +74,35 @@ class ServerRepository(
 
     suspend fun refresh() = refreshLock.withLock {
         _state.update { it.copy(refreshing = true, error = null) }
+        val now = System.currentTimeMillis()
+        // 1) Everything except the raw live VPN Gate list (verified list + imported configs).
         val results = withContext(Dispatchers.IO) {
-            providers.map { p -> async { p.id to runCatching { p.fetch() } } }.awaitAll()
+            providers.filter { it.id != VpnGateParser.PROVIDER_ID }
+                .map { p -> async { p.id to runCatching { p.fetch() } } }.awaitAll()
+        }.toMutableList()
+        val verified = results.firstOrNull { it.first == VerifiedListProvider.ID }?.second?.getOrNull()
+        val verifiedFresh = verified != null && verified.servers.isNotEmpty() &&
+            now - (verified.generatedAt ?: 0L) < VERIFIED_MAX_AGE_MS
+        // 2) Only good, tested servers are shown. The unverified live list is a fallback for when the
+        //    verified list can't be downloaded or the verification job has stopped.
+        if (!verifiedFresh) {
+            providers.firstOrNull { it.id == VpnGateParser.PROVIDER_ID }?.let { p ->
+                results += p.id to withContext(Dispatchers.IO) { runCatching { p.fetch() } }
+            }
         }
         val servers = ArrayList<VpnServer>()
         val configs = HashMap<String, String>()
         val errors = HashMap<String, String>()
         for ((id, r) in results) {
+            if (id == VerifiedListProvider.ID && !verifiedFresh) {
+                r.exceptionOrNull()?.let { errors[id] = it.message ?: it.javaClass.simpleName }
+                    ?: run { errors[id] = "verified list is out of date" }
+                continue
+            }
             r.onSuccess { servers += it.servers; configs += it.configs }
                 .onFailure { errors[id] = it.message ?: it.javaClass.simpleName }
         }
-        val anySuccess = results.any { it.second.isSuccess && it.second.getOrNull()!!.servers.isNotEmpty() }
-        if (!anySuccess) {
+        if (servers.isEmpty()) {
             // Keep the previous (cached) list, but tell the user it could not be updated.
             _state.update {
                 it.copy(refreshing = false, providerErrors = errors,
@@ -88,13 +112,17 @@ class ServerRepository(
             return@withLock
         }
         synchronized(liveConfigs) { liveConfigs.clear(); liveConfigs.putAll(configs) }
-        val now = System.currentTimeMillis()
-        val prevHealth = _state.value.health.filterKeys { k -> servers.any { it.id == k } }
+        val ids = servers.mapTo(HashSet()) { it.id }
+        val prevHealth = _state.value.health.filterKeys { it in ids }
+        val verifiedAt = if (verifiedFresh) verified!!.generatedAt ?: 0L else 0L
         withContext(Dispatchers.IO) {
             cache.saveConfigs(configs)
-            cache.saveSnapshot(ServerCache.Snapshot(now, servers, prevHealth))
+            cache.saveSnapshot(ServerCache.Snapshot(now, servers, prevHealth, verifiedAt))
         }
-        _state.update { it.copy(servers = servers, health = prevHealth, fetchedAt = now, refreshing = false, providerErrors = errors) }
+        _state.update {
+            it.copy(servers = servers, health = prevHealth, fetchedAt = now, refreshing = false,
+                providerErrors = errors, verifiedAt = verifiedAt, unverifiedFallback = !verifiedFresh)
+        }
         if (!probesPaused) runHealthChecks()
     }
 
@@ -154,12 +182,14 @@ class ServerRepository(
 
     private suspend fun persist() = withContext(Dispatchers.IO) {
         val s = _state.value
-        cache.saveSnapshot(ServerCache.Snapshot(s.fetchedAt, s.servers, s.health))
+        cache.saveSnapshot(ServerCache.Snapshot(s.fetchedAt, s.servers, s.health, s.verifiedAt))
     }
 
     companion object {
         const val STALE_MS = 2 * 60 * 60_000L     // refresh list every 2 h
         const val HEALTH_INTERVAL_MS = 10 * 60_000L
+        /** The verification job runs every 4 h; after 30 h without a new list fall back to the live list. */
+        const val VERIFIED_MAX_AGE_MS = 30 * 60 * 60_000L
 
         fun countriesOf(s: State): List<CountryGroup> {
             val byCountry = s.servers.groupBy { it.countryCode }

@@ -1,21 +1,24 @@
-# Real OpenVPN test of every VPN Gate server (Actions → VPN Gate server test → Run workflow)
-name: VPN Gate server test
+# Manual real-tunnel + security test of every candidate free VPN server (read-only: changes nothing).
+name: VPN server test
 on:
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update -q && sudo apt-get install -y -q openvpn curl
-      - run: sudo python3 tools/vpn-server-test/test_servers.py --parallel 8 --timeout 30
-      - run: cat results.md >> "$GITHUB_STEP_SUMMARY"
-        if: always()
+      - run: sudo apt-get update -q && sudo apt-get install -y -q openvpn curl dnsutils
+      - run: git clone --depth 1 -q https://github.com/GeorgeXie2333/vpngate-list-mirror.git /tmp/pool || echo "mirror unavailable"
+      - run: |
+          sudo python3 tools/vpn-server-test/test_servers.py --pool /tmp/pool --community servers/community.json \
+            --parallel 32 --publish out --print-verified
+      - if: always()
+        run: cat out/results.md >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: vpn-server-test-results
-          path: |
-            results.json
-            results.md
+          path: out/

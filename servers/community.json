@@ -1,0 +1,4 @@
+{
+  "_comment": "Your own / community OpenVPN servers. Each one is tested every 4 hours together with VPN Gate and published to the app only while it is GOOD. See server-setup/README.md. 'config' is the full client .ovpn text (use \\n for new lines).",
+  "servers": []
+}

@@ -6,6 +6,7 @@ import com.moni.freeglobalvpn.data.ServerCache
 import com.moni.freeglobalvpn.data.ServerRepository
 import com.moni.freeglobalvpn.data.SettingsStore
 import com.moni.freeglobalvpn.data.provider.ImportedConfigProvider
+import com.moni.freeglobalvpn.data.provider.VerifiedListProvider
 import com.moni.freeglobalvpn.data.provider.VpnGateProvider
 import com.moni.freeglobalvpn.vpn.VpnController
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +24,7 @@ class AppContainer(app: Application) {
     val secureStore = SecureStore(app)
     val importedProvider = ImportedConfigProvider(secureStore)
     val repository = ServerRepository(
-        providers = listOf(VpnGateProvider(), importedProvider),
+        providers = listOf(VerifiedListProvider(publicKeyB64 = BuildConfig.LIST_PUBLIC_KEY), VpnGateProvider(), importedProvider),
         cache = ServerCache(app),
         scope = scope,
         // If a VPN is already up (e.g. app restarted while connected) don't probe through the tunnel.

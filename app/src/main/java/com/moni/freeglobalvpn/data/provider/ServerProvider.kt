@@ -30,4 +30,6 @@ data class ProviderResult(
     val servers: List<VpnServer>,
     /** serverId -> full OpenVPN config text */
     val configs: Map<String, String>,
+    /** When the list itself was produced (for lists published by a job), epoch ms. */
+    val generatedAt: Long? = null,
 )

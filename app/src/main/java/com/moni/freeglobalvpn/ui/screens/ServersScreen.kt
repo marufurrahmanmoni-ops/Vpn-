@@ -87,7 +87,8 @@ fun ServersScreen(vm: MainViewModel, onConnectRequest: (() -> Unit) -> Unit, onC
             Column(Modifier.weight(1f)) {
                 Text("Locations", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "${countries.count { it.isAvailable }} countries with live servers · updated ${Fmt.ago(st.fetchedAt)}" +
+                    (if (st.verifiedAt > 0) "✓ ${st.servers.size} tested-good servers in ${countries.count { it.isAvailable }} countries · tested ${Fmt.ago(st.verifiedAt)}"
+                    else "${countries.count { it.isAvailable }} countries with live servers · updated ${Fmt.ago(st.fetchedAt)}") +
                         if (st.checkingHealth) " · checking…" else "",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -108,6 +109,14 @@ fun ServersScreen(vm: MainViewModel, onConnectRequest: (() -> Unit) -> Unit, onC
                         Spacer(Modifier.width(1.dp).padding(4.dp))
                     }
                 }
+            }
+        }
+        if (st.unverifiedFallback && st.servers.isNotEmpty()) {
+            Surface(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(14.dp), color = Brand.Amber.copy(alpha = 0.14f)) {
+                Text(
+                    "The tested-good list couldn't be downloaded, so untested live servers are shown. Some may not work – the app will skip them automatically.",
+                    Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
         st.error?.let {
@@ -257,7 +266,8 @@ private fun ServerRow(
                     add("${server.protocol.uppercase()} ${server.port}")
                     val lat = health?.latencyMs ?: server.reportedPingMs
                     add(if (!reachable) "unreachable" else lat?.let { "$it ms" } ?: "– ms")
-                    server.reportedSpeedBps?.takeIf { it > 0 }?.let { add(String.format(java.util.Locale.US, "%.0f Mbps", it / 1e6)) }
+                    if (server.verifiedMbps != null) add(String.format(java.util.Locale.US, "✓ tested %.0f Mbps", server.verifiedMbps))
+                    else server.reportedSpeedBps?.takeIf { it > 0 }?.let { add(String.format(java.util.Locale.US, "%.0f Mbps", it / 1e6)) }
                     server.uptimeMs?.let { add("up ${Fmt.uptime(it)}") }
                     server.logPolicy?.let { add("logs: $it") }
                     if ((health?.failures ?: 0) > 0) add("failed recently")

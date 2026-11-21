@@ -118,7 +118,8 @@ fun HomeScreen(
             Column(Modifier.weight(1f)) {
                 Text("Free Global VPN", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "${countries.count { it.isAvailable }} countries · ${serverState.servers.size} live servers",
+                    "${countries.count { it.isAvailable }} countries · ${serverState.servers.size} " +
+                        if (serverState.verifiedAt > 0) "tested-good servers" else "live servers",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

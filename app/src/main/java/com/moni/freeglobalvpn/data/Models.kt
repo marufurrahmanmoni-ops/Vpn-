@@ -23,6 +23,16 @@ data class VpnServer(
     val operator: String? = null,
     /** Logging policy declared by the server operator, shown to the user verbatim. */
     val logPolicy: String? = null,
+    /** Download speed measured through a real tunnel by the verification job (null = not verified). */
+    val verifiedMbps: Double? = null,
+    /** When the verification job last proved this server good (epoch ms). */
+    val verifiedAt: Long? = null,
+    /**
+     * Required server-certificate name. VPN Gate configs trust the whole Let's Encrypt root without a
+     * name check (any Let's Encrypt certificate would be accepted), so VPN Gate servers are pinned to
+     * "opengw.net" – the name on VPN Gate's server certificates.
+     */
+    val pinnedCertName: String? = null,
 )
 
 /** Result of our own reachability probe from this device. */

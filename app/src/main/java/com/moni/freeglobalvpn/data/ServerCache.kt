@@ -18,6 +18,7 @@ class ServerCache(context: Context) {
         val fetchedAt: Long,
         val servers: List<VpnServer>,
         val health: Map<String, ServerHealth> = emptyMap(),
+        val verifiedAt: Long = 0,
     )
 
     fun loadSnapshot(): Snapshot? = runCatching {

@@ -18,6 +18,8 @@ import java.util.Base64
  */
 object VpnGateParser {
     const val PROVIDER_ID = "vpngate"
+    /** Common name on VPN Gate servers' (Let's Encrypt) certificates. */
+    const val CERT_NAME = "opengw.net"
     private const val FIXED_LEFT = 12 // HostName .. LogType
 
     fun parse(csv: String): ProviderResult {
@@ -70,6 +72,7 @@ object VpnGateParser {
                 uptimeMs = cols[8].trim().toLongOrNull(),
                 operator = operator?.takeIf { it.isNotBlank() },
                 logPolicy = cols[11].trim().ifEmpty { null },
+                pinnedCertName = CERT_NAME,
             )
             configs[id] = config
         }
