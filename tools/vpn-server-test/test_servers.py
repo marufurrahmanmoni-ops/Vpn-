@@ -86,6 +86,23 @@ def harden(cfg):
     return text
 
 
+def classify(txt, timeout):
+    rules = [
+        (r"AUTH_FAILED", "server rejected login"),
+        (r"Connection refused|ECONNREFUSED", "connection refused (server offline / port closed)"),
+        (r"connect\(\) .* timed out|Connection timed out|ETIMEDOUT|Network is unreachable", "TCP connect timed out (server offline)"),
+        (r"TLS key negotiation failed|TLS handshake failed", "TLS handshake timed out (server not answering OpenVPN)"),
+        (r"VERIFY ERROR|certificate verify failed|CRL", "server certificate rejected"),
+        (r"cipher|data-ciphers|NCP", "cipher negotiation failed"),
+        (r"Connection reset|ECONNRESET|connection-reset", "connection reset by server"),
+        (r"Options error|Unrecognized option", "config option error"),
+    ]
+    for pat, why in rules:
+        if re.search(pat, txt, re.I):
+            return why
+    return "no handshake within %ss" % timeout
+
+
 def run(cmd, timeout=20):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
@@ -132,8 +149,8 @@ def test_one(s, timeout):
         txt = open(log, errors="replace").read() if os.path.exists(log) else ""
         if not done:
             res["stage"] = "handshake"
-            err = [l for l in txt.splitlines() if re.search(r"error|fail|refused|timeout|TLS|Exiting|cipher", l, re.I)]
-            res["error"] = (err[-1].split(" ", 5)[-1] if err else "no handshake within %ss" % timeout)[:160]
+            res["error"] = classify(txt, timeout)
+            res["log_tail"] = [l.split(" ", 5)[-1][:160] for l in txt.splitlines()[-6:]]
             return res
         res["handshake_s"] = round(time.time() - t0, 1)
         m = re.search(r"Data Channel: cipher '([^']+)'", txt) or re.search(r"Outgoing Data Channel: Cipher '([^']+)'", txt)
@@ -194,6 +211,7 @@ def main():
     ap.add_argument("--csv")
     ap.add_argument("--parallel", type=int, default=8)
     ap.add_argument("--timeout", type=int, default=30)
+    ap.add_argument("--retry", type=int, default=1, help="retry failed servers once (1) or not (0)")
     a = ap.parse_args()
     if os.geteuid() != 0:
         sys.exit("run as root (needs tun devices and policy routing)")
@@ -205,6 +223,15 @@ def main():
     started = time.time()
     with ThreadPoolExecutor(a.parallel) as ex:
         results = list(ex.map(lambda s: test_one(s, a.timeout), servers))
+    failed = [i for i, r in enumerate(results) if not r["ok"]]
+    if failed and a.retry:
+        print(f"\nRetrying {len(failed)} failed servers once…", flush=True)
+        with ThreadPoolExecutor(a.parallel) as ex:
+            again = list(ex.map(lambda i: test_one(servers[i], a.timeout), failed))
+        for i, r in zip(failed, again):
+            r["first_attempt_error"] = results[i].get("error")
+            r["needed_retry"] = r["ok"]
+            results[i] = r
     for r in results:
         r["ip_changed"] = bool(r.get("exit_ip")) and r.get("exit_ip") != direct
     ok = [r for r in results if r["ok"]]
@@ -229,6 +256,12 @@ def main():
     for r in sorted(ok, key=lambda r: -(r.get("down_mbps") or 0)):
         md.append(f"| {r['cc']} {r['id']} | {r['proto']} | {r['handshake_s']} s | {r.get('exit_ip')} ({r.get('exit_cc')}) | "
                   f"{r.get('latency_ms')} ms | {r.get('down_mbps')} Mbps | {r['uptime_h']} h | {r['log']} |")
+    reasons = {}
+    for r in results:
+        if not r["ok"]:
+            reasons[r.get("error", "?")] = reasons.get(r.get("error", "?"), 0) + 1
+    md += ["", "## Why servers failed", "", "| Reason | Servers |", "|---|---|"]
+    md += [f"| {k} | {v} |" for k, v in sorted(reasons.items(), key=lambda x: -x[1])]
     md += ["", "## Failed servers", "", "| Server | Stage | Reason |", "|---|---|---|"]
     for r in results:
         if not r["ok"]:
