@@ -56,7 +56,8 @@ class ServerRepository(
 
     init {
         scope.launch(Dispatchers.IO) {
-            val snap = cache.loadSnapshot()
+            // Older app versions cached the untested live list – keep only tested/imported servers.
+            val snap = cache.loadSnapshot()?.let { sn -> sn.copy(servers = sn.servers.filter { it.providerId != VpnGateParser.PROVIDER_ID }) }
             _state.update {
                 if (snap != null) it.copy(servers = snap.servers, health = snap.health, fetchedAt = snap.fetchedAt, loadingFromCache = false,
                     verifiedAt = snap.verifiedAt, unverifiedFallback = snap.verifiedAt == 0L && snap.servers.any { s -> s.providerId == VpnGateParser.PROVIDER_ID })
@@ -81,8 +82,7 @@ class ServerRepository(
                 .map { p -> async { p.id to runCatching { p.fetch() } } }.awaitAll()
         }.toMutableList()
         val verified = results.firstOrNull { it.first == VerifiedListProvider.ID }?.second?.getOrNull()
-        val verifiedFresh = verified != null && verified.servers.isNotEmpty() &&
-            now - (verified.generatedAt ?: 0L) < VERIFIED_MAX_AGE_MS
+        val verifiedFresh = verified != null && verified.servers.isNotEmpty()
         // 2) Only good, tested servers are shown. The unverified live list is a fallback for when the
         //    verified list can't be downloaded or the verification job has stopped.
         if (!verifiedFresh) {
@@ -188,25 +188,24 @@ class ServerRepository(
     companion object {
         const val STALE_MS = 2 * 60 * 60_000L     // refresh list every 2 h
         const val HEALTH_INTERVAL_MS = 10 * 60_000L
-        /** The verification job runs every 4 h; after 30 h without a new list fall back to the live list. */
-        const val VERIFIED_MAX_AGE_MS = 30 * 60 * 60_000L
 
         fun countriesOf(s: State): List<CountryGroup> {
             val byCountry = s.servers.groupBy { it.countryCode }
-            val groups = byCountry.map { (cc, list) ->
+            val groups = byCountry.filterValues { list -> ServerRanking.rank(list, s.health).isNotEmpty() }.map { (cc, list) ->
                 val ranked = ServerRanking.rank(list, s.health)
-                val unreachable = list - ranked.toSet()
                 CountryGroup(
                     code = cc,
                     name = list.first().countryName,
-                    servers = ranked + unreachable,
+                    // Only servers that still answer from this phone; dead/unreachable ones are hidden.
+                    servers = ranked,
                     bestLatencyMs = ranked.firstNotNullOfOrNull { s.health[it.id]?.latencyMs }
                         ?: ranked.firstOrNull()?.reportedPingMs,
                     availability = ServerRanking.availability(list, s.health),
                 )
             }.toMutableList()
             // Requested countries with no live server: listed honestly as unavailable.
-            for (cc in Countries.requested) if (cc !in byCountry) {
+            val shown = groups.map { it.code }.toSet()
+            for (cc in Countries.requested) if (cc !in shown) {
                 groups += CountryGroup(cc, Countries.name(cc), emptyList(), null, Availability.UNAVAILABLE)
             }
             return groups.sortedWith(compareBy<CountryGroup> { !it.isAvailable }.thenBy { it.name })

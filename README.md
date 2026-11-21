@@ -5,6 +5,15 @@ in many countries using **OpenVPN** through Android's `VpnService`.
 
 Developer: **Md. Marufur Rahman Moni**
 
+## Download
+
+* [`apk/FreeGlobalVPN-1.1.0-arm64-v8a.apk`](apk/FreeGlobalVPN-1.1.0-arm64-v8a.apk) – most phones (4.8 MB)
+* [`apk/FreeGlobalVPN-1.1.0-universal.apk`](apk/FreeGlobalVPN-1.1.0-universal.apk) – any phone/emulator (13 MB)
+
+Version 1.1.0 offers **only tested-good, secure servers**: 179 servers in 29 countries that passed a real
+OpenVPN tunnel test + security checks (see [docs/SERVER_TEST_RESULTS.md](docs/SERVER_TEST_RESULTS.md)).
+Signed with the debug key – fine for installing yourself; sign with your own key before publishing (docs/BUILD.md).
+
 | | |
 |---|---|
 | VPN engine | OpenVPN 2.x via [ics-openvpn](https://github.com/schwabe/ics-openvpn) (vendored, GPLv2) |
@@ -23,6 +32,20 @@ Developer: **Md. Marufur Rahman Moni**
 * Download/upload speeds come from the engine's real byte counters; ping is a live TCP handshake
   through the tunnel; the speed test downloads/uploads real data (speed.cloudflare.com).
 * DNS servers shown are read from Android's `LinkProperties` of the VPN network.
+
+## Security
+
+* VPN Gate's stock configs trust the whole Let's Encrypt root **without checking the server name**, so any
+  Let's Encrypt certificate would be accepted (man-in-the-middle). The app **pins the certificate name to
+  `opengw.net`** and requires a TLS-server certificate.
+* Servers are kept only with TLS ≥ 1.2, RSA ≥ 2048 bit, an AES data cipher, and when the test proved they do
+  not modify plain-HTTP pages or forge DNS answers.
+* Downloaded configs are stripped of script/plugin/management directives; saved profiles are AES-256-GCM
+  encrypted with an Android Keystore key; no backups; ics-openvpn's remote-control API is removed.
+* Optional: ECDSA signature on the downloadable server list (`FGV_LIST_PUBKEY` + `VERIFIED_LIST_SIGNING_KEY`).
+* Honest limits: VPN Gate servers use AES-128-CBC + HMAC-SHA1 (older, not broken), and every VPN Gate
+  volunteer shares the same `opengw.net` certificate, so a volunteer could impersonate another volunteer.
+  Free volunteer servers are not "no-log".
 
 ## Feature list
 

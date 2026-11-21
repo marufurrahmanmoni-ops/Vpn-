@@ -17,6 +17,7 @@ object ServerRanking {
         val uptimeDays = (s.uptimeMs ?: 0L) / 86_400_000.0
         val sessions = (s.sessions ?: 0).toDouble()
         val recentFailures = if (h != null && now - h.lastFailureAt < FAILURE_DECAY_MS) h.failures else 0
+        if (recentFailures >= 2) return Double.MAX_VALUE   // failed twice from this phone recently: hide it
 
         var cost = latency
         cost -= min(speedMbps, 200.0) * 0.6      // up to -120

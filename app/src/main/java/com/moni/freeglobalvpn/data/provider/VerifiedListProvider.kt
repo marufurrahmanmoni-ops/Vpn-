@@ -27,9 +27,11 @@ class VerifiedListProvider(
      * CDN or network path is rejected. Empty = rely on HTTPS only. See docs/SERVER_INTEGRATION.md.
      */
     private val publicKeyB64: String = "",
+    /** The tested-good list shipped inside the APK (used when no newer list can be downloaded). */
+    private val bundled: () -> String? = { null },
 ) : ServerProvider {
     override val id = ID
-    override val displayName = "Verified free servers (VPN Gate + community)"
+    override val displayName = "Tested free servers (VPN Gate + community)"
     override val engine = ServerProvider.Engine.OPENVPN
     override val loggingDisclosure =
         "These are VPN Gate volunteer servers (University of Tsukuba academic experiment) and self-hosted " +
@@ -41,6 +43,17 @@ class VerifiedListProvider(
     @Volatile private var credentials: Map<String, Pair<String, String>> = emptyMap()
 
     override suspend fun fetch(): ProviderResult = withContext(Dispatchers.IO) {
+        val shipped = runCatching { bundled()?.let { VerifiedListParser.parse(it) } }.getOrNull()
+        val online = runCatching { fetchOnline() }.getOrNull()
+        // Use the newest tested list: a freshly published one if available, otherwise the one in the APK.
+        val best = listOfNotNull(online, shipped).filter { it.result.servers.isNotEmpty() }
+            .maxByOrNull { it.result.generatedAt ?: 0L }
+            ?: throw IOException("no tested server list available")
+        credentials = best.credentials
+        best.result
+    }
+
+    private fun fetchOnline(): VerifiedListParser.Parsed {
         var last: Exception? = null
         for (u in urls) {
             try {
@@ -52,8 +65,7 @@ class VerifiedListProvider(
                 }
                 val parsed = VerifiedListParser.parse(text)
                 if (parsed.result.servers.isEmpty()) throw IOException("empty verified list at $u")
-                credentials = parsed.credentials
-                return@withContext parsed.result
+                return parsed
             } catch (e: Exception) {
                 last = e
             }

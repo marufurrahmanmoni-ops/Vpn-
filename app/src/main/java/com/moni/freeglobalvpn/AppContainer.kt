@@ -7,7 +7,6 @@ import com.moni.freeglobalvpn.data.ServerRepository
 import com.moni.freeglobalvpn.data.SettingsStore
 import com.moni.freeglobalvpn.data.provider.ImportedConfigProvider
 import com.moni.freeglobalvpn.data.provider.VerifiedListProvider
-import com.moni.freeglobalvpn.data.provider.VpnGateProvider
 import com.moni.freeglobalvpn.vpn.VpnController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +23,14 @@ class AppContainer(app: Application) {
     val secureStore = SecureStore(app)
     val importedProvider = ImportedConfigProvider(secureStore)
     val repository = ServerRepository(
-        providers = listOf(VerifiedListProvider(publicKeyB64 = BuildConfig.LIST_PUBLIC_KEY), VpnGateProvider(), importedProvider),
+        // Only servers that passed the real tunnel + security test are offered (no untested live list).
+        providers = listOf(
+            VerifiedListProvider(
+                publicKeyB64 = BuildConfig.LIST_PUBLIC_KEY,
+                bundled = { runCatching { app.assets.open("verified_servers.json").bufferedReader().use { it.readText() } }.getOrNull() },
+            ),
+            importedProvider,
+        ),
         cache = ServerCache(app),
         scope = scope,
         // If a VPN is already up (e.g. app restarted while connected) don't probe through the tunnel.
