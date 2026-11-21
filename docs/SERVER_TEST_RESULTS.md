@@ -69,4 +69,4 @@ Available: AE, AU, CA, ES, FR, GB, IN, JP, KR, US
 
 Not available in this test (shown as *Currently unavailable*): BD, CH, DE, IT, NL, NO, SE, SG, TR
 
-Free volunteer servers change constantly. Re-run *Actions → VPN server test* and rebuild to refresh the list, or enable `tools/vpn-server-test/update-servers.yml.example` for automatic updates.
+Free volunteer servers change constantly. Re-run *Actions → VPN server test* and rebuild to refresh the list, or enable automatic updates with `tools/vpn-server-test/update-servers.yml.example` (see the comment at its top).

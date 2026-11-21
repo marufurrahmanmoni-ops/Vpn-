@@ -1,11 +1,14 @@
-# OPTIONAL – not active. Copy to .github/workflows/ to refresh the in-app list automatically every 4 h.
-# Tests every free VPN server with a real OpenVPN tunnel and publishes ONLY the good ones
-# to the `servers` branch (servers/verified.json), which the app downloads.
-name: Update verified servers
+# OPTIONAL – NOT ACTIVE. To keep the app's server list fresh automatically, create the file
+# .github/workflows/update-servers.yml with the content below (GitHub → Add file → Create new file).
+#
+# Every 6 hours (and on demand) every candidate free server gets a real OpenVPN tunnel + security test,
+# and ONLY the good ones are published to the `servers` branch (servers/verified.json) with a normal
+# commit. The app downloads that file when you tap "Update" (and every 2 h).
+name: Update tested servers
 on:
   workflow_dispatch:
   schedule:
-    - cron: "23 */4 * * *"   # every 4 hours
+    - cron: "41 */6 * * *"
 permissions:
   contents: write
 concurrency:
@@ -14,42 +17,41 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - name: Install OpenVPN
-        run: sudo apt-get update -q && sudo apt-get install -y -q openvpn curl dnsutils
-      - name: Get candidate pools
+      - run: sudo apt-get update -q && sudo apt-get install -y -q openvpn curl dnsutils
+      - name: Candidate pools
         run: |
-          git clone --depth 1 -q https://github.com/GeorgeXie2333/vpngate-list-mirror.git /tmp/pool || echo "mirror unavailable – using live API only"
+          git clone --depth 1 -q https://github.com/GeorgeXie2333/vpngate-list-mirror.git /tmp/pool || echo "mirror unavailable"
           curl -fsSL -o /tmp/previous.json "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/servers/verified.json" || echo '{}' > /tmp/previous.json
-      - name: Real tunnel test of every server
+      - name: Real tunnel + security test
         run: |
           sudo python3 tools/vpn-server-test/test_servers.py --pool /tmp/pool --previous /tmp/previous.json \
             --community servers/community.json --parallel 32 --publish out
           sudo chown -R "$USER" out
-      - name: Job summary
-        if: always()
+      - if: always()
         run: cat out/results.md >> "$GITHUB_STEP_SUMMARY" || true
-      - name: Publish to the servers branch
+      - name: Publish (normal commit on the servers branch, only when there are good servers)
         env:
           SIGNING_KEY: ${{ secrets.VERIFIED_LIST_SIGNING_KEY }}
         run: |
-          python3 -c "import json,sys; d=json.load(open('out/verified.json')); sys.exit(0 if d['servers'] else 1)" || { echo "No good servers – keeping the previous list"; exit 0; }
-          cd out
+          python3 -c "import json,sys; sys.exit(0 if json.load(open('out/verified.json'))['servers'] else 1)" || { echo "No good servers – keeping the previous list"; exit 0; }
           if [ -n "$SIGNING_KEY" ]; then
             printf '%s\n' "$SIGNING_KEY" > /tmp/k.pem
-            openssl dgst -sha256 -sign /tmp/k.pem verified.json | base64 -w0 > verified.json.sig
+            openssl dgst -sha256 -sign /tmp/k.pem out/verified.json | base64 -w0 > out/verified.json.sig
             rm -f /tmp/k.pem
           fi
-          git init -q -b servers
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch -q --depth 1 origin servers; then
+            git checkout -q -B servers FETCH_HEAD
+          else
+            git checkout -q --orphan servers && git rm -rq --cached . && git clean -fdxq -e out
+          fi
+          cp out/verified.json out/results.md .
+          if [ -f out/verified.json.sig ]; then cp out/verified.json.sig .; fi
           git add verified.json results.md $( [ -f verified.json.sig ] && echo verified.json.sig )
-          git commit -q -m "Verified servers $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" servers
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: server-test-results
-          path: out/results.json
+          git diff --cached --quiet && { echo "No change"; exit 0; }
+          git commit -q -m "Tested servers $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q origin servers
