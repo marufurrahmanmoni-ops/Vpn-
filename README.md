@@ -9,14 +9,18 @@ Developer: **Md. Marufur Rahman Moni**
 
 ## Download
 
-**[`apk/FreeGlobalVPN-1.2.0.apk`](apk/FreeGlobalVPN-1.2.0.apk)** – one APK for every phone (Android 7.0+, all CPU types, 13 MB).
+**[`apk/FreeGlobalVPN-1.3.0.apk`](apk/FreeGlobalVPN-1.3.0.apk)** – one APK for every phone (Android 7.0+, all CPU types, 13 MB).
 Check: `apk/SHA256SUMS.txt`. Signed with a debug key – fine to install yourself; sign with your own key before publishing (docs/BUILD.md).
 
-What's in 1.2.0:
-* **One-tap Smart Connect** – the big button measures the best tested servers from your phone and connects to the fastest (automatic failover if one doesn't answer).
-* **Only tested-good, secure servers** (see [docs/SERVER_TEST_RESULTS.md](docs/SERVER_TEST_RESULTS.md)); *Update* in Locations or *Developer options → Update servers now* downloads the newest tested list.
-* New logo, **Developer options** with the developer's profile, server-list diagnostics and connection log.
-* Fixed "There was a problem parsing the package": a single universal APK, minimum Android lowered from 8.0 to 7.0.
+What's in 1.3.0:
+* **Fixed "There was a problem parsing the package"** – two engine screens were declared as aliases without a target, which
+  makes Android reject the whole APK. Every build is now checked by `tools/verify_apk.py` (also in CI).
+* **Realme / OPPO, Xiaomi / Redmi / POCO, Samsung**: one-tap battery exemption and the maker's own auto-start / battery
+  screens, so the phone doesn't kill the VPN in the background.
+* **Automatic server updates** every 6 h (WorkManager): newest tested list + VPN Gate servers checked from the phone with a
+  real OpenVPN handshake. Plus **Update** in Locations and in Developer options.
+* One-tap **Smart Connect**, new logo, **Developer options** with the developer's photo and name.
+* 160 tested-good, secure servers in 28 countries shipped inside the app ([docs/SERVER_TEST_RESULTS.md](docs/SERVER_TEST_RESULTS.md)).
 
 ## Security
 
