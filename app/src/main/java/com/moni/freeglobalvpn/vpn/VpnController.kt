@@ -66,6 +66,7 @@ class VpnController(
     private var current: VpnServer? = null
     private var session: Session? = null
     private var watchdog: Job? = null
+    private var searchJob: Job? = null
     private var userStop = false
     private var connectStartedAt = 0L
     private var lastBytesAt = 0L
@@ -103,7 +104,35 @@ class VpnController(
         }
     }
 
+    /**
+     * One-tap Smart Connect: measures the real latency from this phone to the best-ranked tested
+     * servers (worldwide, or in [countryCode]), then connects to the fastest reachable one. If it does
+     * not answer, smart failover moves on to the next best automatically.
+     */
+    fun smartConnect(countryCode: String? = null) {
+        if (_state.value.isActive) return
+        searchJob?.cancel()
+        searchJob = scope.launch {
+            val candidates = repo.ranked(countryCode).take(SMART_CANDIDATES)
+            if (candidates.isEmpty()) {
+                _state.value = ConnectionState.Failed(null,
+                    if (countryCode != null) "No tested server in ${Countries.name(countryCode)} is reachable right now. Try Smart Connect for the best country."
+                    else "No tested server is reachable right now. Tap Update servers, or check your internet connection.")
+                return@launch
+            }
+            _state.value = ConnectionState.Searching(countryCode, candidates.size)
+            repo.probeNow(candidates)
+            if (_state.value !is ConnectionState.Searching) return@launch // cancelled by the user
+            connect(null, countryCode)
+        }
+    }
+
     fun disconnect() {
+        if (_state.value is ConnectionState.Searching) {
+            searchJob?.cancel()
+            _state.value = ConnectionState.Disconnected
+            return
+        }
         userStop = true
         session = null
         watchdog?.cancel()
@@ -360,6 +389,7 @@ class VpnController(
     private companion object {
         const val TAG = "VpnController"
         const val MAX_ATTEMPTS = 4
+        const val SMART_CANDIDATES = 16
         const val CONNECT_TIMEOUT_MS = 25_000L
         const val RECONNECT_TIMEOUT_MS = 45_000L
     }

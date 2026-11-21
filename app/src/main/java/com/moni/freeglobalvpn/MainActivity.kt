@@ -48,6 +48,7 @@ import androidx.navigation.compose.rememberNavController
 import com.moni.freeglobalvpn.ui.MainViewModel
 import com.moni.freeglobalvpn.ui.screens.AboutScreen
 import com.moni.freeglobalvpn.ui.screens.BypassAppsScreen
+import com.moni.freeglobalvpn.ui.screens.DeveloperScreen
 import com.moni.freeglobalvpn.ui.screens.HomeScreen
 import com.moni.freeglobalvpn.ui.screens.PrivacyScreen
 import com.moni.freeglobalvpn.ui.screens.ServersScreen
@@ -118,10 +119,11 @@ private fun AppRoot(vm: MainViewModel, showDisclosure: Boolean) {
                 composable("servers") { ServersScreen(vm, requestConnect, onConnected = goHome) }
                 composable("settings") {
                     SettingsScreen(vm, openBypass = { nav.navigate("bypass") }, openAbout = { nav.navigate("about") },
-                        openPrivacy = { nav.navigate("privacy") }, toast = toast)
+                        openPrivacy = { nav.navigate("privacy") }, openDeveloper = { nav.navigate("developer") }, toast = toast)
                 }
                 composable("bypass") { BypassAppsScreen(vm) { nav.popBackStack() } }
                 composable("about") { AboutScreen { nav.popBackStack() } }
+                composable("developer") { DeveloperScreen(vm, onBack = { nav.popBackStack() }, openAbout = { nav.navigate("about") }) }
                 composable("privacy") { PrivacyScreen(vm) { nav.popBackStack() } }
             }
         }

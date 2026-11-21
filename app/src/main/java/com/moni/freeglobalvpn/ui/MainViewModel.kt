@@ -48,14 +48,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val selectedOverride = MutableStateFlow<String?>(null)
 
-    /** The server the big button will use: the one picked, else last used (if still listed). */
-    val selected: StateFlow<VpnServer?> = combine(repository.state, settings, connection, selectedOverride) { st, s, conn, pick ->
+    /**
+     * The server shown on Home: the one in use, or the one the user picked by hand.
+     * null = Smart Connect (the app picks the fastest tested server automatically).
+     */
+    val selected: StateFlow<VpnServer?> = combine(repository.state, connection, selectedOverride) { st, conn, pick ->
         when (conn) {
             is ConnectionState.Connected -> conn.server
             is ConnectionState.Connecting -> conn.server
             is ConnectionState.Reconnecting -> conn.server
             else -> pick?.let { id -> st.servers.firstOrNull { it.id == id } }
-                ?: s.lastServerId?.let { id -> st.servers.firstOrNull { it.id == id } }
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -113,13 +115,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- actions
-    fun quickConnect() = c.vpn.connect(null, null)
+    /** One tap: measure the best tested servers from this phone and connect to the fastest. */
+    fun quickConnect() { selectedOverride.value = null; c.vpn.smartConnect(null) }
     fun connectSelectedOrQuick() {
         val s = selected.value
-        if (s != null) c.vpn.connect(s) else quickConnect()
+        if (s != null) c.vpn.connect(s) else c.vpn.smartConnect(null)
     }
     fun connectServer(server: VpnServer) { selectedOverride.value = server.id; c.vpn.connect(server) }
-    fun connectCountry(code: String) { selectedOverride.value = null; c.vpn.connect(null, code) }
+    fun connectCountry(code: String) { selectedOverride.value = null; c.vpn.smartConnect(code) }
+    fun useSmartConnect() { selectedOverride.value = null }
+
+    // ---- server list updates & developer options
+    fun updateServers() = repository.refreshAsync()
+    fun retestServers() = repository.runHealthChecks()
+    fun resetServerHealth() = repository.resetHealth()
+    fun connectionLog(): List<String> = runCatching {
+        de.blinkt.openvpn.core.VpnStatus.getlogbuffer().takeLast(120).map { it.getString(getApplication()) }
+    }.getOrDefault(emptyList())
     fun disconnect() = c.vpn.disconnect()
     fun refreshServers() = repository.refreshAsync()
 

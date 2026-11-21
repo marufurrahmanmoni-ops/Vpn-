@@ -5,33 +5,18 @@ in many countries using **OpenVPN** through Android's `VpnService`.
 
 Developer: **Md. Marufur Rahman Moni**
 
+<img src="docs/images/logo-512.png" width="96" alt="Free Global VPN logo">
+
 ## Download
 
-* [`apk/FreeGlobalVPN-1.1.0-arm64-v8a.apk`](apk/FreeGlobalVPN-1.1.0-arm64-v8a.apk) – most phones (4.8 MB)
-* [`apk/FreeGlobalVPN-1.1.0-universal.apk`](apk/FreeGlobalVPN-1.1.0-universal.apk) – any phone/emulator (13 MB)
+**[`apk/FreeGlobalVPN-1.2.0.apk`](apk/FreeGlobalVPN-1.2.0.apk)** – one APK for every phone (Android 7.0+, all CPU types, 13 MB).
+Check: `apk/SHA256SUMS.txt`. Signed with a debug key – fine to install yourself; sign with your own key before publishing (docs/BUILD.md).
 
-Version 1.1.0 offers **only tested-good, secure servers**: 179 servers in 29 countries that passed a real
-OpenVPN tunnel test + security checks (see [docs/SERVER_TEST_RESULTS.md](docs/SERVER_TEST_RESULTS.md)).
-Signed with the debug key – fine for installing yourself; sign with your own key before publishing (docs/BUILD.md).
-
-| | |
-|---|---|
-| VPN engine | OpenVPN 2.x via [ics-openvpn](https://github.com/schwabe/ics-openvpn) (vendored, GPLv2) |
-| Free servers | [VPN Gate](https://www.vpngate.net/) public relay list (University of Tsukuba) + your own imported `.ovpn` files |
-| UI | Jetpack Compose, Material 3, dark/light, dotted world map, emoji flags |
-| Min / target SDK | 26 (Android 8.0) / 37 |
-| License | **GNU GPL v2** (required by ics-openvpn) |
-
-## What is real (nothing is simulated)
-
-* The server list is downloaded live from VPN Gate's public API. Only servers that the API actually
-  publishes are shown. Requested countries with no live server are listed as **"Currently unavailable"**.
-* "Connected" is shown only when the OpenVPN engine reports `LEVEL_CONNECTED` (handshake done,
-  tunnel interface up, routes installed).
-* Your **public IP** is re-checked after connecting (ipwho.is → api.ipify.org fallback) so you can see it change.
-* Download/upload speeds come from the engine's real byte counters; ping is a live TCP handshake
-  through the tunnel; the speed test downloads/uploads real data (speed.cloudflare.com).
-* DNS servers shown are read from Android's `LinkProperties` of the VPN network.
+What's in 1.2.0:
+* **One-tap Smart Connect** – the big button measures the best tested servers from your phone and connects to the fastest (automatic failover if one doesn't answer).
+* **Only tested-good, secure servers** (see [docs/SERVER_TEST_RESULTS.md](docs/SERVER_TEST_RESULTS.md)); *Update* in Locations or *Developer options → Update servers now* downloads the newest tested list.
+* New logo, **Developer options** with the developer's profile, server-list diagnostics and connection log.
+* Fixed "There was a problem parsing the package": a single universal APK, minimum Android lowered from 8.0 to 7.0.
 
 ## Security
 

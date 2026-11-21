@@ -148,6 +148,19 @@ class ServerRepository(
         }
     }
 
+    /** Real latency probe of [servers] from this phone right now (used by Smart Connect). */
+    suspend fun probeNow(servers: List<VpnServer>) {
+        val fresh = HealthChecker.checkAll(servers, _state.value.health, parallelism = 16)
+        _state.update { it.copy(health = it.health + fresh) }
+        persist()
+    }
+
+    /** Forget all measurements and failures (Developer options). */
+    fun resetHealth() {
+        _state.update { it.copy(health = emptyMap()) }
+        scope.launch { persist(); if (!probesPaused) runHealthChecks() }
+    }
+
     fun recordFailure(serverId: String) {
         _state.update { st ->
             val h = st.health[serverId] ?: ServerHealth(reachable = true)

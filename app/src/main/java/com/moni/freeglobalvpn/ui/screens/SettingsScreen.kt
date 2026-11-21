@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,7 +50,7 @@ import com.moni.freeglobalvpn.ui.components.AppCard
 import com.moni.freeglobalvpn.ui.components.SectionTitle
 
 @Composable
-fun SettingsScreen(vm: MainViewModel, openBypass: () -> Unit, openAbout: () -> Unit, openPrivacy: () -> Unit, toast: (String) -> Unit) {
+fun SettingsScreen(vm: MainViewModel, openBypass: () -> Unit, openAbout: () -> Unit, openPrivacy: () -> Unit, openDeveloper: () -> Unit, toast: (String) -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var pendingUri by remember { mutableStateOf<Uri?>(null) }
@@ -126,6 +128,25 @@ fun SettingsScreen(vm: MainViewModel, openBypass: () -> Unit, openAbout: () -> U
                 }
             }
             TextButton(onClick = { picker.launch(arrayOf("*/*")) }) { Text("Import .ovpn file") }
+        }
+
+        SectionTitle("Developer options")
+        AppCard(Modifier.clickable(onClick = openDeveloper)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.moni.freeglobalvpn.R.drawable.developer_photo),
+                    contentDescription = "Photo of $DEVELOPER_NAME",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.size(56.dp).clip(androidx.compose.foundation.shape.CircleShape),
+                )
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(DEVELOPER_NAME, style = MaterialTheme.typography.titleMedium)
+                    Text("Developer · server list, diagnostics & connection log", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+            }
         }
 
         SectionTitle("About")

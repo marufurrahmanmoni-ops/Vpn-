@@ -10,7 +10,6 @@ import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.time.Instant
 
 /**
  * "Verified good servers": every 4 hours a GitHub Actions job in this app's repository connects to
@@ -134,7 +133,13 @@ object VerifiedListParser {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun instant(s: String?): Long? = s?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+    /** Parses "2026-11-21T21:21:59Z" (works on every Android version, unlike java.time). */
+    private fun instant(s: String?): Long? = s?.let {
+        runCatching {
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+                .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.parse(it)!!.time
+        }.getOrNull()
+    }
 
     fun parse(text: String): Parsed {
         val f = json.decodeFromString<File>(text)
@@ -182,13 +187,16 @@ object VerifiedListParser {
 
 /** ECDSA P-256 / SHA-256 signature check for the published server list. */
 object ListSignature {
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    private fun b64(s: String) = kotlin.io.encoding.Base64.decode(s.trim())
+
     fun verify(data: ByteArray, signatureB64: String, publicKeyB64: String): Boolean = runCatching {
         val key = java.security.KeyFactory.getInstance("EC")
-            .generatePublic(java.security.spec.X509EncodedKeySpec(java.util.Base64.getDecoder().decode(publicKeyB64.trim())))
+            .generatePublic(java.security.spec.X509EncodedKeySpec(b64(publicKeyB64)))
         java.security.Signature.getInstance("SHA256withECDSA").run {
             initVerify(key)
             update(data)
-            verify(java.util.Base64.getDecoder().decode(signatureB64))
+            verify(b64(signatureB64))
         }
     }.getOrDefault(false)
 }

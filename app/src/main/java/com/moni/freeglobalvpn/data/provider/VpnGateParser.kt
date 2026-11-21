@@ -2,7 +2,8 @@ package com.moni.freeglobalvpn.data.provider
 
 import com.moni.freeglobalvpn.data.Countries
 import com.moni.freeglobalvpn.data.VpnServer
-import java.util.Base64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Parser for the public VPN Gate list (https://www.vpngate.net/api/iphone/).
@@ -22,6 +23,9 @@ object VpnGateParser {
     const val CERT_NAME = "opengw.net"
     private const val FIXED_LEFT = 12 // HostName .. LogType
 
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun decode(b64: String) = String(Base64.Mime.decode(b64), Charsets.UTF_8)
+
     fun parse(csv: String): ProviderResult {
         val servers = ArrayList<VpnServer>()
         val configs = HashMap<String, String>()
@@ -40,7 +44,7 @@ object VpnGateParser {
             if (b64.length < 100) continue
 
             val config = try {
-                String(Base64.getMimeDecoder().decode(b64), Charsets.UTF_8)
+                decode(b64)
             } catch (_: IllegalArgumentException) {
                 continue
             }

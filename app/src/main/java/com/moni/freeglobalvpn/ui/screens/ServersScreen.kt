@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -95,8 +96,10 @@ fun ServersScreen(vm: MainViewModel, onConnectRequest: (() -> Unit) -> Unit, onC
             }
             IconButton(onClick = { showInfo = !showInfo }) { Icon(Icons.Filled.Info, "About these servers") }
             val rot by rememberInfiniteTransition(label = "r").animateFloat(0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "a")
-            IconButton(onClick = vm::refreshServers, enabled = !st.refreshing) {
-                Icon(Icons.Filled.Refresh, "Refresh list", Modifier.rotate(if (st.refreshing) rot else 0f))
+            TextButton(onClick = vm::updateServers, enabled = !st.refreshing) {
+                Icon(Icons.Filled.Refresh, null, Modifier.size(18.dp).rotate(if (st.refreshing) rot else 0f))
+                Spacer(Modifier.width(4.dp))
+                Text(if (st.refreshing) "Updating…" else "Update")
             }
         }
 
@@ -166,8 +169,8 @@ fun ServersScreen(vm: MainViewModel, onConnectRequest: (() -> Unit) -> Unit, onC
                         Text("⚡", style = MaterialTheme.typography.headlineSmall)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Smart connect", style = MaterialTheme.typography.titleMedium)
-                            Text("Fastest reachable server, ranked by latency, uptime and load", style = MaterialTheme.typography.bodySmall,
+                            Text("Smart Connect", style = MaterialTheme.typography.titleMedium)
+                            Text("Measures the best tested servers from your phone and connects to the fastest", style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }

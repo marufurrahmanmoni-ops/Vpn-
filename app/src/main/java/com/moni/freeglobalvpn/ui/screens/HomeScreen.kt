@@ -98,6 +98,7 @@ fun HomeScreen(
         is ConnectionState.Connected -> c.server.countryCode
         is ConnectionState.Connecting -> c.server.countryCode
         is ConnectionState.Reconnecting -> c.server.countryCode
+        is ConnectionState.Searching -> c.countryCode
         else -> selected?.countryCode
     }
 
@@ -111,8 +112,11 @@ fun HomeScreen(
         Spacer(Modifier.height(10.dp))
         // Header
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).background(Brand.gradient, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Lock, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Box(Modifier.size(42.dp).background(Brand.gradient, RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
+                androidx.compose.foundation.Image(
+                    androidx.compose.ui.res.painterResource(com.moni.freeglobalvpn.R.drawable.ic_launcher_foreground),
+                    contentDescription = null, modifier = Modifier.size(42.dp),
+                )
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
@@ -173,10 +177,10 @@ fun HomeScreen(
             selected = selected, onClick = openServers,
             latency = selected?.let { s -> serverState.health[s.id]?.latencyMs ?: s.reportedPingMs },
         )
-        if (conn is ConnectionState.Disconnected || conn is ConnectionState.Failed) {
+        if (selected != null && (conn is ConnectionState.Disconnected || conn is ConnectionState.Failed)) {
             Spacer(Modifier.height(8.dp))
-            FilledTonalButton(onClick = { onConnectRequest { vm.quickConnect() } }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                Text("⚡  Quick Connect – fastest server")
+            FilledTonalButton(onClick = { vm.useSmartConnect(); onConnectRequest { vm.quickConnect() } }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Text("⚡  Smart Connect – find the fastest server for me")
             }
         }
 
@@ -257,19 +261,21 @@ private fun StatusPill(visual: ButtonVisual, color: Color) {
 
 @Composable
 private fun StatusText(conn: ConnectionState, engineMsg: String, color: Color) {
-    AnimatedContent(conn::class, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "status") { _ ->
+    AnimatedContent(conn, transitionSpec = { fadeIn() togetherWith fadeOut() }, contentKey = { it::class }, label = "status") { state ->
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            val (title, sub) = when (conn) {
-                is ConnectionState.Disconnected -> "Not connected" to "Tap the button to secure your connection"
+            val (title, sub) = when (state) {
+                is ConnectionState.Disconnected -> "Not connected" to "One tap: the app finds the fastest tested server and connects"
+                is ConnectionState.Searching -> "Finding the best server…" to
+                    "Measuring ${state.candidates} tested servers${state.countryCode?.let { " in " + Countries.name(it) } ?: ""} from your phone"
                 is ConnectionState.Connecting -> "Connecting…" to buildString {
-                    append(conn.detail.ifBlank { engineMsg })
-                    if (conn.maxAttempts > 1 && conn.attempt > 1) append("  (server ${conn.attempt}/${conn.maxAttempts})")
+                    append(state.detail.ifBlank { engineMsg })
+                    if (state.maxAttempts > 1 && state.attempt > 1) append("  (server ${state.attempt}/${state.maxAttempts})")
                 }
-                is ConnectionState.Connected -> "Connected" to "${conn.server.countryName} · ${conn.server.protocol.uppercase()} ${conn.server.port}"
-                is ConnectionState.Reconnecting -> "Reconnecting…" to conn.detail
+                is ConnectionState.Connected -> "Connected" to "${state.server.countryName} · ${state.server.protocol.uppercase()} ${state.server.port}"
+                is ConnectionState.Reconnecting -> "Reconnecting…" to state.detail
                 is ConnectionState.WaitingForNetwork -> "Waiting for network" to "Will reconnect automatically when you're back online"
                 is ConnectionState.Paused -> "Paused" to "VPN paused by the system (e.g. screen off setting)"
-                is ConnectionState.Failed -> "Connection failed" to conn.reason
+                is ConnectionState.Failed -> "Connection failed" to state.reason
                 is ConnectionState.Disconnecting -> "Disconnecting…" to ""
             }
             Text(title, style = MaterialTheme.typography.headlineSmall, color = color, fontWeight = FontWeight.Bold)
@@ -290,12 +296,12 @@ private fun LocationCard(selected: com.moni.freeglobalvpn.data.VpnServer?, laten
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    selected?.countryName ?: "Smart location",
+                    selected?.countryName ?: "⚡ Smart Connect (automatic)",
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
                     selected?.let { "${it.hostName} · ${latency?.let { l -> "$l ms" } ?: "latency unknown"}" }
-                        ?: "Best server picked by latency & stability",
+                        ?: "Fastest tested & secure server, measured from your phone",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )

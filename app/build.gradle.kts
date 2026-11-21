@@ -13,10 +13,10 @@ android {
 
     defaultConfig {
         applicationId = "com.moni.freeglobalvpn"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
         // Public key that must have signed the verified server list (empty = HTTPS only). See docs.
         buildConfigField("String", "LIST_PUBLIC_KEY", "\"${providers.gradleProperty("FGV_LIST_PUBKEY").orElse("").get()}\"")
         ndk {
@@ -41,6 +41,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            // One APK that installs on every phone (no ABI splits to pick from).
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (providers.gradleProperty("FGV_KEYSTORE").isPresent)
@@ -51,14 +52,11 @@ android {
         }
     }
 
-    // Split per-ABI APKs (smaller downloads) + one universal APK.
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
-            isUniversalApk = true
-        }
+    // Signature schemes (AGP adds v1 only when minSdk < 24; v2/v3 are supported by every Android 7.0+ device).
+    signingConfigs.configureEach {
+        enableV1Signing = true
+        enableV2Signing = true
+        enableV3Signing = true
     }
 
     buildFeatures {

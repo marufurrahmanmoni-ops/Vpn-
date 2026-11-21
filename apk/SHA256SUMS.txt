@@ -1,2 +1,1 @@
-00f18a153ab1aee93d6e338386cfc06fb2f076b128f0085ab11fe7076c8e267b  FreeGlobalVPN-1.1.0-arm64-v8a.apk
-4ffccf0ede9cccc0375e8cd2d9147e3a2a74d102e3f34e60fc4f2a78edcf4023  FreeGlobalVPN-1.1.0-universal.apk
+3066835b45a8cec4aa6be4cbd169623c0030acb1a7f11cf8b906f24e7fc0307e  FreeGlobalVPN-1.2.0.apk

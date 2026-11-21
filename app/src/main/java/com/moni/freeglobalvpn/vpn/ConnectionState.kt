@@ -4,6 +4,8 @@ import com.moni.freeglobalvpn.data.VpnServer
 
 sealed interface ConnectionState {
     data object Disconnected : ConnectionState
+    /** Smart Connect is measuring the best candidates from this phone before connecting. */
+    data class Searching(val countryCode: String?, val candidates: Int) : ConnectionState
     data class Connecting(val server: VpnServer, val detail: String, val attempt: Int = 1, val maxAttempts: Int = 1) : ConnectionState
     data class Connected(val server: VpnServer, val since: Long) : ConnectionState
     data class Reconnecting(val server: VpnServer, val detail: String) : ConnectionState
@@ -13,7 +15,7 @@ sealed interface ConnectionState {
     data object Disconnecting : ConnectionState
 
     val isActive: Boolean
-        get() = this is Connecting || this is Connected || this is Reconnecting || this is WaitingForNetwork || this is Paused
+        get() = this is Searching || this is Connecting || this is Connected || this is Reconnecting || this is WaitingForNetwork || this is Paused
 }
 
 data class TrafficStats(
