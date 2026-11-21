@@ -1,0 +1,20 @@
+--- /tmp/CMakeLists.orig	2026-11-21 23:19:26.747225823 +0600
++++ CMakeLists.txt	2026-11-21 23:19:26.750249015 +0600
+@@ -41,7 +41,7 @@
+ 
+     # Super hacky way to determine flavour
+ #-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/Users/arne/software/icsopenvpn/main/build/intermediates/cmake/normal/debug/obj/arm64-v8a
+-if (NOT ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} MATCHES "build/intermediates/cmake/.*skeleton.*/")
++if (NOT FGV_SKELETON AND NOT ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} MATCHES "build/intermediates/cmake/.*skeleton.*/")
+     FIND_PACKAGE(SWIG 3.0 REQUIRED)
+ 
+     add_custom_command(OUTPUT "ovpncli_wrap.cxx"
+@@ -118,7 +118,7 @@
+ add_library(osslutil SHARED ovpnutil/osslutil.cpp)
+ target_link_libraries(osslutil log crypto ssl)
+ 
+-if (NOT ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} MATCHES "build/intermediates/cmake/.*skeleton.*/")
++if (NOT FGV_SKELETON AND NOT ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} MATCHES "build/intermediates/cmake/.*skeleton.*/")
+     add_library(osslspeedtest SHARED ovpnutil/sslspeed.c)
+     target_link_libraries(osslspeedtest log crypto ssl)
+ else ()

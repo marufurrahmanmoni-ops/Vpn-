@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shield with globe meridians – original artwork for Free Global VPN -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,28 L74,35 L74,52 C74,65 65,75 54,80 C43,75 34,65 34,52 L34,35 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#FF6C5CE7" android:strokeWidth="2.6"
+        android:pathData="M54,40 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0 M54,40 m-12,0 M42,40 L66,40 M54,28 L54,52 M54,28 C47,33 47,47 54,52 M54,28 C61,33 61,47 54,52"
+        android:strokeLineCap="round" />
+    <path android:fillColor="#FF22C55E" android:pathData="M48.5,62 L52.5,66 L60,58.5 L58,56.5 L52.5,62 L50.5,60 Z" />
+</vector>

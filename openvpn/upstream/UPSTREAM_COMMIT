@@ -1,0 +1,4 @@
+660901ce320539aec476bd04bd1999c396d5e778
+# Trimmed for this repo: openvpn3/, asio/, mbedtls/ (unused OpenVPN3/mbedTLS paths) and
+# sample/test private keys from openssl/apps and openvpn/sample + openvpn unit-test key data
+# (public test material, not used by the Android build; removed so GitHub push protection accepts the repo).
