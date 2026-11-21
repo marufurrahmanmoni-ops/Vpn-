@@ -150,7 +150,7 @@ def test_one(s, timeout):
         if not done:
             res["stage"] = "handshake"
             res["error"] = classify(txt, timeout)
-            res["log_tail"] = [l.split(" ", 5)[-1][:160] for l in txt.splitlines()[-6:]]
+            res["log_tail"] = [l.split(" ", 5)[-1][:200] for l in txt.splitlines()[-10:]]
             return res
         res["handshake_s"] = round(time.time() - t0, 1)
         m = re.search(r"Data Channel: cipher '([^']+)'", txt) or re.search(r"Outgoing Data Channel: Cipher '([^']+)'", txt)
@@ -204,6 +204,8 @@ def test_one(s, timeout):
         print(f"[{mark}] {res['cc']} {res['id']:<28} {res.get('handshake_s','-')}s "
               f"exit={res.get('exit_ip','-')}({res.get('exit_cc','-')}) "
               f"lat={res.get('latency_ms','-')}ms down={res.get('down_mbps','-')}Mbps {res.get('error','')}", flush=True)
+        if not res.get("ok") and res.get("log_tail"):
+            print("      | " + "\n      | ".join(res["log_tail"]), flush=True)
 
 
 def main():
