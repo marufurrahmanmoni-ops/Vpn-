@@ -17,6 +17,8 @@ jobs:
           "$SDKM" "platforms;android-37.0" "platforms;android-37.2" "build-tools;37.0.0" "ndk;30.0.14904198" "cmake;3.31.6" > /dev/null
       - name: Unit tests + release APKs
         run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleRelease
+      - name: Installer-rules check (catches "problem parsing the package")
+        run: python3 tools/verify_apk.py app/build/outputs/apk/release/app-release.apk
       - uses: actions/upload-artifact@v4
         with:
           name: FreeGlobalVPN-apks

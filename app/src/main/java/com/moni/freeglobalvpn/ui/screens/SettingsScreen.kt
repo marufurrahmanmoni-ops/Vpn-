@@ -69,6 +69,9 @@ fun SettingsScreen(vm: MainViewModel, openBypass: () -> Unit, openAbout: () -> U
             }
         }
 
+        SectionTitle("Keep VPN running")
+        com.moni.freeglobalvpn.ui.components.BackgroundCard()
+
         SectionTitle("Connection")
         AppCard {
             ToggleRow("Auto-reconnect", "Restart the tunnel automatically if it drops", s.autoReconnect, vm::setAutoReconnect)

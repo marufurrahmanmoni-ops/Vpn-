@@ -15,8 +15,8 @@ android {
         applicationId = "com.moni.freeglobalvpn"
         minSdk = 24
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.3.0"
         // Public key that must have signed the verified server list (empty = HTTPS only). See docs.
         buildConfigField("String", "LIST_PUBLIC_KEY", "\"${providers.gradleProperty("FGV_LIST_PUBKEY").orElse("").get()}\"")
         ndk {
@@ -110,6 +110,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.profileinstaller)
+    implementation(libs.androidx.work.runtime)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

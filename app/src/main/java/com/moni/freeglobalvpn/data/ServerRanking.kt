@@ -25,6 +25,7 @@ object ServerRanking {
         cost += min(sessions, 200.0) * 0.8        // busy servers are slower
         cost += recentFailures * 400.0            // avoid servers that just failed
         if (s.protocol == "tcp") cost -= 10.0      // TCP traverses restrictive networks more reliably
+        if (s.providerId == "live") cost += 40.0   // handshake-checked only: prefer fully tested servers
         return cost
     }
 

@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lets the user exempt the VPN from battery optimisation (Realme/OPPO, Xiaomi/Redmi, Samsung kill background VPNs). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Permissions declared by the ics-openvpn library that this app does not need -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:node="remove" />
@@ -67,7 +69,16 @@
         <receiver android:name="de.blinkt.openvpn.OnBootReceiver" tools:node="remove" />
         <activity android:name="de.blinkt.openvpn.LaunchVPN" android:exported="false" tools:replace="android:exported" />
         <activity android:name="de.blinkt.openvpn.activities.NotImplemented" android:exported="false" tools:replace="android:exported" />
-        <activity-alias android:name="de.blinkt.openvpn.activities.LogWindow" android:exported="false" tools:replace="android:exported" />
-        <activity-alias android:name="de.blinkt.openvpn.activities.Req" android:exported="false" tools:replace="android:exported" />
+        <!-- The engine opens these from its notification / credential prompts. They are declared only in the
+             (unused) skeleton manifest, so define them here and route them to the app's main screen.
+             An activity-alias without targetActivity makes Android reject the whole APK. -->
+        <activity-alias
+            android:name="de.blinkt.openvpn.activities.LogWindow"
+            android:exported="false"
+            android:targetActivity=".MainActivity" />
+        <activity-alias
+            android:name="de.blinkt.openvpn.activities.Req"
+            android:exported="false"
+            android:targetActivity=".MainActivity" />
     </application>
 </manifest>

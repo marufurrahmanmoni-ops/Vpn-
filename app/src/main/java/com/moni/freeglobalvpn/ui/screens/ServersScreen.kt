@@ -269,6 +269,7 @@ private fun ServerRow(
                     add("${server.protocol.uppercase()} ${server.port}")
                     val lat = health?.latencyMs ?: server.reportedPingMs
                     add(if (!reachable) "unreachable" else lat?.let { "$it ms" } ?: "– ms")
+                    if (server.providerId == "live") add("✓ live-checked")
                     if (server.verifiedMbps != null) add(String.format(java.util.Locale.US, "✓ tested %.0f Mbps", server.verifiedMbps))
                     else server.reportedSpeedBps?.takeIf { it > 0 }?.let { add(String.format(java.util.Locale.US, "%.0f Mbps", it / 1e6)) }
                     server.uptimeMs?.let { add("up ${Fmt.uptime(it)}") }

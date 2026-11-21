@@ -241,6 +241,37 @@ def security_checks(log, tip):
     return sec
 
 
+def openvpn_probe(ip, port, proto, timeout=3.0):
+    """Same check as the app's OpenVpnProbe: send P_CONTROL_HARD_RESET_CLIENT_V2, expect SERVER_V2."""
+    import socket, struct
+    pkt = bytes([7 << 3]) + os.urandom(8) + b"\x00" + b"\x00\x00\x00\x00"
+    try:
+        if proto == "tcp":
+            with socket.create_connection((ip, port), timeout) as so:
+                so.settimeout(timeout)
+                so.sendall(struct.pack(">H", len(pkt)) + pkt)
+                hdr = so.recv(3)
+                while len(hdr) < 3:
+                    more = so.recv(3 - len(hdr))
+                    if not more:
+                        return False
+                    hdr += more
+                return 10 <= struct.unpack(">H", hdr[:2])[0] <= 2048 and hdr[2] >> 3 == 8
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as so:
+            so.settimeout(timeout)
+            for _ in range(2):
+                so.sendto(pkt, (ip, port))
+                try:
+                    data, _ = so.recvfrom(2048)
+                    if len(data) >= 10 and data[0] >> 3 == 8:
+                        return True
+                except socket.timeout:
+                    pass
+    except OSError:
+        return False
+    return False
+
+
 slot_lock = threading.Lock()
 free_slots = []
 
@@ -253,6 +284,7 @@ def test_one(s, a):
     res = {k: v for k, v in s.items() if k not in ("config", "user", "password")}
     res.update(ok=False, good=False, stage="handshake")
     proc = None
+    res["probe_ok"] = openvpn_probe(s["ip"], s["port"], s["proto"])
     try:
         up = os.path.join(work, "up.sh")
         with open(up, "w") as f:
@@ -446,6 +478,10 @@ def main():
                    criteria=dict(min_mbps=a.min_mbps, max_handshake_s=a.max_handshake, ip_must_change=True,
                                  vpngate_cert_name=VPNGATE_CERT_NAME, tls_min="TLSv1.2", rsa_min_bits=2048,
                                  http_untouched=True, dns_untouched=True))
+    pr = [(r.get("probe_ok"), r["ok"]) for r in results if "probe_ok" in r]
+    agree = {k: sum(1 for p, o in pr if (p, o) == k) for k in [(True, True), (True, False), (False, True), (False, False)]}
+    summary["probe_vs_tunnel"] = {f"probe={k[0]},tunnel={k[1]}": v for k, v in agree.items()}
+    print("PROBE-AGREEMENT", json.dumps(summary["probe_vs_tunnel"]))
     print(f"\nDONE: {summary['working']}/{summary['tested']} work, {summary['good']} good, "
           f"{len(pub)} published in {summary['countries']} countries")
 

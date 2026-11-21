@@ -201,6 +201,11 @@ fun HomeScreen(
             )
         }
 
+        if (!settings.backgroundTipDismissed) {
+            Spacer(Modifier.height(14.dp))
+            com.moni.freeglobalvpn.ui.components.BackgroundCard(compact = true, onDismiss = { vm.dismissBackgroundTip() })
+        }
+
         Spacer(Modifier.height(14.dp))
         IpCard(vm, conn, net)
 

@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 class FreeVpnApp : ICSOpenVPNApplication() {
     lateinit var container: AppContainer
         private set
+    val isReady get() = ::container.isInitialized
 
     override fun onCreate() {
         super.onCreate()
@@ -32,6 +33,8 @@ class FreeVpnApp : ICSOpenVPNApplication() {
             override fun onStop(owner: LifecycleOwner) { container.appVisible.value = false }
         })
         container.repository.startAutoHealth { container.appVisible.value }
+        // Automatic server-list updates in the background (every 6 h).
+        com.moni.freeglobalvpn.data.ServerUpdateWorker.schedule(this)
 
         // First launch: pre-select installed banking / MFS apps (bKash, Nagad, banks…) to bypass the VPN.
         container.scope.launch {

@@ -38,6 +38,7 @@ data class Settings(
     val lastServerId: String? = null,
     val connectedSince: Long = 0,
     val acceptedDisclosure: Boolean = false,
+    val backgroundTipDismissed: Boolean = false,
 )
 
 class SettingsStore(private val context: Context) {
@@ -55,6 +56,7 @@ class SettingsStore(private val context: Context) {
         val lastServer = stringPreferencesKey("last_server")
         val connectedSince = longPreferencesKey("connected_since")
         val disclosure = booleanPreferencesKey("disclosure_ok")
+        val bgTip = booleanPreferencesKey("bg_tip_dismissed")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -77,6 +79,7 @@ class SettingsStore(private val context: Context) {
         lastServerId = this[K.lastServer],
         connectedSince = this[K.connectedSince] ?: 0,
         acceptedDisclosure = this[K.disclosure] ?: false,
+        backgroundTipDismissed = this[K.bgTip] ?: false,
     )
 
     suspend fun setTheme(v: ThemeMode) = context.dataStore.edit { it[K.theme] = v.name }
@@ -86,6 +89,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setDns(v: DnsChoice) = context.dataStore.edit { it[K.dns] = v.name }
     suspend fun setAllowLan(v: Boolean) = context.dataStore.edit { it[K.allowLan] = v }
     suspend fun setDisclosureAccepted() = context.dataStore.edit { it[K.disclosure] = true }
+    suspend fun dismissBackgroundTip() = context.dataStore.edit { it[K.bgTip] = true }
     suspend fun setConnectedSince(v: Long) = context.dataStore.edit { it[K.connectedSince] = v }
 
     suspend fun setBypassApps(v: Set<String>) = context.dataStore.edit { it[K.bypass] = v; it[K.bypassInit] = true }

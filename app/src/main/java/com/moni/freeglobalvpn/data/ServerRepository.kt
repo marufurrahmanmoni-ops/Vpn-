@@ -102,6 +102,14 @@ class ServerRepository(
             r.onSuccess { servers += it.servers; configs += it.configs }
                 .onFailure { errors[id] = it.message ?: it.javaClass.simpleName }
         }
+        // Same endpoint from several sources: keep the first (tested list wins over live-checked).
+        run {
+            val seen = HashSet<String>()
+            val dedup = servers.filter { seen.add("${it.ip}:${it.port}:${it.protocol}") }
+            val keep = dedup.mapTo(HashSet()) { it.id }
+            servers.clear(); servers.addAll(dedup)
+            configs.keys.retainAll(keep)
+        }
         if (servers.isEmpty()) {
             // Keep the previous (cached) list, but tell the user it could not be updated.
             _state.update {

@@ -6,6 +6,7 @@ import com.moni.freeglobalvpn.data.ServerCache
 import com.moni.freeglobalvpn.data.ServerRepository
 import com.moni.freeglobalvpn.data.SettingsStore
 import com.moni.freeglobalvpn.data.provider.ImportedConfigProvider
+import com.moni.freeglobalvpn.data.provider.LiveCheckedProvider
 import com.moni.freeglobalvpn.data.provider.VerifiedListProvider
 import com.moni.freeglobalvpn.vpn.VpnController
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,7 @@ class AppContainer(app: Application) {
                 publicKeyB64 = BuildConfig.LIST_PUBLIC_KEY,
                 bundled = { runCatching { app.assets.open("verified_servers.json").bufferedReader().use { it.readText() } }.getOrNull() },
             ),
+            LiveCheckedProvider(),
             importedProvider,
         ),
         cache = ServerCache(app),

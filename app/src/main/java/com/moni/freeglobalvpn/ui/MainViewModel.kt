@@ -143,6 +143,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setDns(v: DnsChoice) = viewModelScope.launch { c.settings.setDns(v) }
     fun setAllowLan(v: Boolean) = viewModelScope.launch { c.settings.setAllowLan(v) }
     fun acceptDisclosure() = viewModelScope.launch { c.settings.setDisclosureAccepted() }
+    fun dismissBackgroundTip() = viewModelScope.launch { c.settings.dismissBackgroundTip() }
     fun clearRecents() = viewModelScope.launch { c.settings.clearRecents() }
     fun setBypass(pkg: String, bypass: Boolean) = viewModelScope.launch {
         val cur = settings.value.bypassApps
